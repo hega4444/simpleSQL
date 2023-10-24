@@ -14,7 +14,7 @@ from simpleSQL import SimpleSQL
 
 # Load data and preprocess
 with SimpleSQL("salaries", drop_after=True) as db:
-    db.create_from_csv("Experience-Salary.csv", table_name="salaries", create_pri_key=True)
+    db.create_table_from_csv("data/SalaryData.csv", table_name="salaries", create_pri_key=True)
     data = list(db.into_dict(sql_block="SELECT * FROM salaries").values())
 
 df = pd.DataFrame(data)

@@ -9,7 +9,7 @@ if __name__ == '__main__':
         
         # Read and create new table in DB
         db.create_table_from_csv("data/SalaryData2.csv", 
-                            table_name= "salaries" , 
+                            table_name= "salaries" ,
                             create_pri_key = True
                             )
         # Open GUI for friendlier db administration
