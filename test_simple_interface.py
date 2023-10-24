@@ -13,4 +13,4 @@ if __name__ == '__main__':
                             create_pri_key = True
                             )
         # Open GUI for friendlier db administration
-        db.simple_interface(load_script = "load_miner")        
+        db.simple_interface(load_script = "load_miners")       

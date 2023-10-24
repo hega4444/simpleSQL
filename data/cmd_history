@@ -1,100 +1,100 @@
-FROM employees
-WHERE salary IN (SELECT salary FROM employees WHERE salary > 60000.00 AND salary < 72000.00);
-SELECT department, AVG(salary) 
-FROM employees GROUP BY department
-HAVING AVG(salary)>=ALL 
-(SELECT AVG(salary) FROM employees 
-GROUP BY department);
-SELECT department_name
-FROM departments d
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM employees
-    WHERE department = d.department_name
-);
-SELECT department_name
-FROM departments
-WHERE department_name = (
-    SELECT department
-    FROM employees
-    GROUP BY department
-    HAVING AVG(salary) = (
-        SELECT MAX(avg_salary)
-        FROM (
-            SELECT department, AVG(salary) as avg_salary
-            FROM employees
-            GROUP BY department
-        ) AS subquery
-    )
-);
-SELECT department_name
-FROM departments
-WHERE department_name = (
-    SELECT department
-    FROM employees
-    GROUP BY department
-    HAVING AVG(salary) = (
-        SELECT MAX(avg_salary)
-        FROM (
-            SELECT department, AVG(salary) as avg_salary
-            FROM employees
-            GROUP BY department
-        ) AS subquery
-    )
-);
-show employees
-show departments
+def miner apple for salaries
+salary
+n
+def miner ball for salaries
+salary
+n
+list miner
+list miners
 close
-preview
+def miner ball for salaries
+salary
+n
+def miner ball for salaries
+a
+def miner apple for salaries
+salary
+n
+list miners
 close
-preview
-close
-preview
-play recording employees__.rec
-preview
-show employees
-close
-mine table salaries
+def miner apple for salaries
 salary
 y
-close
-WITH
-sad
-select
-caca
-;
-jhkjh
-casa
-select
-sadasd
-asdsada
-sad
-asd
-;
-run
-close
-preview
-miner settings limits sdf 23
-miner settings hide_unfit
-miner settings detailed asd
-run
-list recordings
-play recording test_hernan__.rec
-clear
-fields salaries
-make prediction
-make prediction salaries
+n
+def miner ball for salaries
+salary
+y
+n
+miner balll set features gender education
+miner ball set features gender education
+list miners
+make prediction ball
 Male
-PdD
-0
-make prediction salaries
-Female
-PdD
-0
-help
-mine table salaries
+phd
+make prediction apple
+Male
+as
+12
+miner apple set features Age Experience
+make prediction apple 
+12
+close
+start recording
+def miner model1 for salaries
 salary
 y
-clear
-/home/dci-student/simpleSQL/venv/bin/python /home/dci-student/simpleSQL/tensor.py
+n
+def model2 for salaries
+def miner model2 for salaries
+salary
+n
+miner model2 set features Age Experience
+list miners
+end recording
+y
+load_miners
+make prediction model2
+23
+12
+close
+make prediction model2
+23
+close
+def model3 for salaries
+def miner model3 for salaries
+salary
+n
+miner model3 set features Gender, Experience
+list miners
+make prediction model3
+Male
+12
+miner model3 settings limits 0.023 0.6 0.9
+list miners
+preview
+list recordings
+list miners
+make prediction model2
+34
+23
+close
+list miners
+close
+plot model1
+plot model2
+plot model23
+plot
+plot model2
+plot model1
+plot model2
+list miners
+home
+list miners
+preview
+list
+def miner model4 for salaries
+salary
+y
+n
+list miners
 close

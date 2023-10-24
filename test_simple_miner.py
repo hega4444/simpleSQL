@@ -8,7 +8,7 @@ if __name__ == '__main__':
         db.printer.load_style(options={'align':'l','color':'multi1'})
         
         # Read and create new table in DB
-        db.create_table_from_csv("SalaryData2.csv", 
+        db.create_table_from_csv("data/SalaryData2.csv", 
                         table_name= "salaries" , 
                         create_pri_key = True
                         )

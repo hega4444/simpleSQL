@@ -23,7 +23,9 @@
 #                                       options={'align':'l'}
 #                                       )
 #
-from simpleMiner import SimpleMiner
+from simpleMiner import SimpleMiner_Linear, SimpleMiner_ANN
+from simpleMiner import ANN_MODEL
+from simpleMiner import LINEAR_MODEL
 
 from typing import Any
 from prettytable import PrettyTable
@@ -702,7 +704,16 @@ class SimpleSQL():
         self.create_table_from_dict(table_data, table_name = table_name, create_pri_key = create_pri_key)
 
     def new_model(self, model_type, table_name):
-        return SimpleMiner(self, model_type, table_name)
+
+        if model_type == LINEAR_MODEL:
+            return SimpleMiner_Linear(db_object = self,
+                                      table_name = table_name, 
+                                      )
+        
+        elif model_type == ANN_MODEL:
+            return SimpleMiner_ANN(db_object = self,
+                                      table_name = table_name, 
+                                      )
     
     def new_table(self, options):
         return PrettyTablePlus(**options)
@@ -780,6 +791,7 @@ class SimpleInterface():
         self.hide_unfit = True
         self.show_r2_details = False
         self.cur_color = 'Multi1'
+        self.active_miners = {}
 
         self.keywords = ["preview", "show", "select", "update", "table", "create", "from",
                                  "run", "exit", "close", "default", "color", "red", "multi1",
@@ -1089,24 +1101,34 @@ class SimpleInterface():
                 command_executed = True
 
 
-            elif "mine table" in command.lower():
+            elif "def miner" in command.lower():
                 try:
-                    arg = self.get_args("mine table", command)[0]
 
-                    if not self.db.check_table_exists(table_name=arg):
-                        raise ValueError(f"Table '{arg}' does not exist.")
+                    args = self.get_args("def miner", command)  #def miner 0:'apple' 1:for 2:'salaries'
+                    new_name =  args[0]
+                    table = args[2]
 
-                    self.miner = self.db.new_model(model_type = 'LinearRegression', table_name=arg)
-                    self.miner.theme_color = self.cur_color
+                    if "for" not in args:
+                        raise SyntaxError(f"Missing arguments. Type 'def <miner_name> for <table>' first.")
+
+                    if new_name in self.keywords or new_name in self.db.get_table_names():
+                        raise ValueError(f"Cannot create miner '{name}'. Do not use table names or keywords.")
+
+                    if not self.db.check_table_exists(table_name = table):
+                        raise ValueError(f"Table '{table}' does not exist.")
+                    
+                    self.active_miners[new_name] = self.db.new_model(model_type = LINEAR_MODEL, table_name = table)
+
+                    self.active_miners[new_name].theme_color = self.cur_color
 
                     print(cs(f"Indicate target field", color= "LightSteelBlue2"))
                     target = self.get_input()
-                    fields = self.db.get_table_fields(table_name = arg)
+                    fields = self.db.get_table_fields(table_name = table)
 
-                    if target.capitalize() not in self.db.get_table_fields(table_name = arg):
-                        raise ValueError(f"Field '{target}' not present in table '{arg}'.")
+                    if target.capitalize() not in self.db.get_table_fields(table_name = table):
+                        raise ValueError(f"Field '{target}' not present in table '{table}'.")
 
-                    r2_data = self.miner.analize_field_relations(target = target,
+                    r2_data = self.active_miners[new_name].analize_field_relations(target = target,
                                                                 show_details= self.show_r2_details, 
                                                                 hide_unfit= self.hide_unfit)
                                        
@@ -1117,76 +1139,82 @@ class SimpleInterface():
                         features = [f.replace(" ", "") for f in r2_data[0][0].split(",")]
                         print(cs(f"Setting model features to {r2_data[0][0]}.", color= "yellow"))
 
-                        self.miner.define_model_features(features = features, target= [target.capitalize()])
+                        self.active_miners[new_name].define_model_features(features = features, target= [target.capitalize()])
 
                     print(cs(f"Plot results?[y/n]:", color= "LightSteelBlue2"), end="", flush=True)
                     show_plot = True if self.get_input().lower() in ["y", "yes"] else False
 
                     if show_plot:
-                        self.miner.show_plot()
+                        self.active_miners[new_name].show_plot()
                 except IndexError:
-                    print(cs("Missing argument <table>.", color='yellow'))
+                    print(cs("Missing arguments. Type 'def <miner_name> for <table>' first.", color='yellow'))
                 except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True
             
-            elif "miner settings" in command.lower():
+            elif "miner" in command.lower() and "settings" in command.lower():
                 try:
-                    args = self.get_args("miner settings", command)
+                    args = self.get_args("miner", command)
                     args = [arg for arg in args if arg != ',']
 
-                    if args == []:
-                        if not self.miner:
-                            raise AttributeError("Miner not active. Type 'miner settings help'")
-                        else:
-                            self.miner.show_model_performance()
-                            r2_1, r2_2, r2_3 = self.miner.r2_limits
-                            print(cs(f"""R² high threshole: {r2_1}
+                    miner_name = args[0]
+
+                    if not miner_name in self.active_miners:
+                        raise ValueError(f"Miner '{miner_name}' not defined yet. Type 'def miner <miner_name> <table_name>' first.")
+                    
+                    if len(args) == 2:
+                        self.active_miners[miner_name].show_model_performance()
+                        r2_1, r2_2, r2_3 = self.active_miners[miner_name].r2_limits
+                        print(cs(f"""R² high threshole: {r2_1}
 R² moderate threshold:{ r2_2} 
 R² low threshold: {r2_3}
-                                """, color='LightSteelBlue2'))
-                            print(cs(f"Hide_unfit: {self.hide_unfit}", color='LightSteelBlue2'))
-                            print(cs(f"Detailed: {self.show_r2_details}", color='LightSteelBlue2'))
-                            print(cs("\ntype 'miner settings help' to learn how to adjust settings", color='LightSteelBlue2'))
-                    
-                    elif args[0].lower() == 'help':
-                        print(cs("type 'miner settings' ...", color='LightSteelBlue2'))
-                        print(cs("limits <low, mod, high>     : Define r2 threshols ", color='LightSteelBlue2'))  
-                        print(cs("hide_unfit: <True, False>   : Hide unfit combinations ", color='LightSteelBlue2'))
-                        print(cs("detailed:   <True, False>   : Show detailed R² classifiation ", color='LightSteelBlue2'))
-                        print(cs("reset:                      : Set default values ", color='LightSteelBlue2'))
-                    
-                    elif args[0].lower() == 'limits':
-                        if len(args) != 4:
-                            print(cs("Format must be 'limits low, mod, high'.", color='yellow'))
+                            """, color='LightSteelBlue2'))
+                        print(cs(f"Hide_unfit: {self.hide_unfit}", color='LightSteelBlue2'))
+                        print(cs(f"Detailed: {self.show_r2_details}", color='LightSteelBlue2'))
+                        print(cs("\ntype 'miner settings help' to learn how to adjust settings", color='LightSteelBlue2'))
+                   
+                    elif args[2].lower() == 'limits':
+                        if len(args) != 6:
+                            print(cs("Format must be 'miner <miner_name> settings limits <low>, <mod>, <high>'.", color='yellow'))
                         elif self.miner:
                             low, mod, high = 1, 2, 3
                             self.miner.set_custom_r2_limits(high = float(args[high]), 
                                                             moderate = float(args[mod]), 
                                                             low = float(args[low]), 
                                                             )     
-                    elif args[0].lower() == 'reset':
+                    elif args[2].lower() == 'reset':
                         if self.miner:
-                            self.miner.reset_limits()
+                            self.active_miners[miner_name].reset_limits()
+                            self.active_miners[miner_name].show_details = False
                             self.show_r2_details = False
                             self.hide_unfit = True
+                            self.active_miners[miner_name].hide_unfit = True
    
-                    elif args[0].lower() == 'hide_unfit':
-                        if args[1].lower() == 'true':
-                            self.hide_unfit = True
-                        elif args[1].lower() == 'false':
-                            self.hide_unfit = False
-                        else:
-                            print(cs("hide_unfit <True / False>", color='yellow'))
+                    elif args[2].lower() == 'hide_unfit':
+                        try:
+                            if args[3].lower() == 'true':
+                                self.active_miners[miner_name].hide_unfit = True
+                                self.hide_unfit = True
+                            elif args[3].lower() == 'false':
+                                self.active_miners[miner_name].hide_unfit = False
+                                self.hide_unfit = False
+                            else:
+                                print(cs("Type miner <miner_name> settings hide_unfit <True / False>'", color='yellow'))
+                        except IndexError:
+                             print(cs("Type miner <miner_name> settings hide_unfit <True / False>'", color='yellow'))
                     
-                    elif args[0].lower() == 'detailed':
-                        if args[1].lower() == 'true':
-                            self.show_r2_details = True
-                        elif args[1].lower() == 'false':
-                            self.show_r2_details = False
-                        else:
-                            print(cs("detailed <True / False>", color='yellow'))
-                
+                    elif args[2].lower() == 'detailed':
+                        try:
+                            if args[3].lower() == 'true':
+                                self.show_r2_details = True
+                                self.active_miners[miner_name].show_details = True
+                            elif args[3].lower() == 'false':
+                                self.show_r2_details = False
+                                self.active_miners[miner_name].show_details = True
+                            else:
+                                print(cs("Type miner <miner_name> settings detailed <True / False>'", color='yellow'))
+                        except IndexError:
+                            print(cs("Type miner <miner_name> settings detailed <True / False>'", color='yellow'))     
                 except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True
@@ -1213,61 +1241,110 @@ R² low threshold: {r2_3}
             
             elif "make prediction" in command.lower():
                 try:
-                    if not self.miner:
-                        print(cs("No miner has been set up yet. Check 'miner settings help'...", color='yellow'))
+                    args = self.get_args("make prediction", command)
+                    miner_name = args[0]
+                    if miner_name not in self.active_miners:
+                        raise ValueError(f"Miner '{miner_name}' not defined yet. Type 'def miner <miner_name> <table_name>' first.")
                     else:
                         try:
-                            table = self.get_args("make prediction", command)[0]
-                            if self.miner.table_name != table:
-                                print(cs(f"Miner has not been set up for table {table}", color='yellow'))
-                            else:
-                                args = {}
-                                print(cs("Specify value for field...", color='LightSteelBlue2'))  
-                                for feature in self.miner.current_features:
-                                    print(cs(f"* '{feature}'", color='LightSteelBlue2'), end="", flush=True)  
+                            prediction_args = {}
+                            print(cs("Specify value for field...", color='LightSteelBlue2'))  
+                            for feature in self.active_miners[miner_name].current_features:
+                                print(cs(f"* '{feature}'", color='LightSteelBlue2'), end="", flush=True)  
 
-                                    value_input = self.get_input()
-                                    args[feature] = self.convert_input_to_data_type(value_input)
-                                
-                                result = self.miner.predict(args)
-                                print(cs(f"\nPredicted output: '{result}'\n", color='Green')) 
+                                value_input = self.get_input()
+                                prediction_args[feature] = self.convert_input_to_data_type(value_input)
                             
-                        except IndexError:
-                            print(cs("Missing argument <table>.", color='yellow'))
+                            result = self.active_miners[miner_name].predict(prediction_args)
+                            print(cs(f"\nPredicted output: '{result}'\n", color='Green')) 
+
                         except Exception:
                             print(cs("Input values presented an issue, try again.", color='yellow'))
-                except Exception:
+                except IndexError:
+                    print(cs("Missing arguments. Type 'make prediction <miner_name>'", color='yellow'))
+                except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True
 
-            elif "miner set features" in command.lower():
+            elif "miner" in command.lower() and "set features" in command.lower():
                 try:
-                    if self.miner is None:
-                        raise ValueError("Model not initiated. Type 'mine table <table> first.'")
-                    fields = self.get_args("miner set features", command)
+                    args = self.get_args("miner", command)
+                    miner_name = args[0]
+                    if miner_name not in self.active_miners:
+                        raise ValueError("Model not initiated. Type 'miner <miner_name> <table> first.'")
+                    
+                    fields = args[3:] #table fields
                     features = [f.replace(" ", "").replace(",", "") for f in fields if f != ""]
                     if len(features) == 0:
                         raise ValueError("Missing arguments <features>.")
 
-                    self.miner.define_model_features(features=features)
+                    self.active_miners[miner_name].define_model_features(features=features)
                     
                 except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True
 
-            elif "miner features" in command.lower():
+            elif "miner" in command.lower() and "features" in command.lower():
                 try:
-                    if self.miner is None:
-                        raise ValueError("Model not initiated. Type 'mine table <table> first.'")
+                    args = self.get_args("miner", command)
+                    miner_name = args[0]
+                    if miner_name not in self.active_miners:
+                        raise ValueError("Model not initiated. Type 'miner <miner_name> <table> first.'")
                     
                     print(cs("Current model features:", color='LightSteelBlue2'))
-                    print(cs(f"{', '.join(self.miner.current_features)}", color='white'))
+                    print(cs(f"{', '.join(self.active_miners[miner_name].current_features)}", color='white'))
                     print()     
-                   
+                except IndexError:
+                    print(cs("Missing arguments. Type miner <name> features.", color='yellow'))
+                except Exception as e:
+                    print(cs(e, color='yellow'))           
+                command_executed = True
+            
+            elif "miner help" == command.lower():
+                    print(cs("type 'miner <miner_name> settings' ...", color='LightSteelBlue2'))
+                    print(cs("limits <low, mod, high>     : Define r2 threshols ", color='LightSteelBlue2'))  
+                    print(cs("hide_unfit: <True, False>   : Hide unfit combinations ", color='LightSteelBlue2'))
+                    print(cs("detailed:   <True, False>   : Show detailed R² classifiation ", color='LightSteelBlue2'))
+                    print(cs("reset:                      : Set default values ", color='LightSteelBlue2'))
+                    command_executed = True
+            
+            elif "list miners" in command.lower():
+                try:
+                    if len(self.active_miners) == 0:
+                        raise ValueError("There are no active miners.")
+                    
+                    table = self.db.new_table(options={'align': 'l', 'color':self.cur_color})
+                    table.field_names = ['Model name', 'Table', 'Model type', 'Features', 'curr. R² ', 'max. R²']
+                    for miner_name in self.active_miners:
+                        model_type = self.active_miners[miner_name].model_type
+                        table_name = self.active_miners[miner_name].table_name
+                        features = ', '.join(self.active_miners[miner_name].current_features)
+                        cur_r2 = round(self.active_miners[miner_name].r2, 3)
+                        max_r2 = round(self.active_miners[miner_name].max_r2, 3)
+
+
+                        record = [miner_name, table_name, model_type, features, cur_r2, max_r2]
+                        table.add_row(record)
+                    
+                    print(table)
+
                 except Exception as e:
                     print(cs(e, color='yellow'))
-                         
                 command_executed = True
+            
+            elif "plot" in command.lower():
+                try:
+                    args = self.get_args("plot", command)
+                    if len(args) != 1:
+                        raise ValueError("Type 'plot <miner_name>'.")
+                    miner_name = args[0]
+                    if miner_name not in self.active_miners:
+                        raise ValueError(f"Miner '{miner_name}' has not been defined yet.")
+                    self.active_miners[miner_name].show_plot()
+                except Exception as e:
+                    print(cs(e, color='yellow'))
+                command_executed = True
+
 
             
             elif "help" in command.lower():
