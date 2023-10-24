@@ -1,16 +1,3 @@
-    ('Eva', 'Williams', 'IT', 60000),
-    ('Michael', 'Anderson', 'IT', 62000),
-    ('Sarah', 'Clark', 'Marketing', 52000),
-    ('David', 'Hall', 'Marketing', 53000),
-    ('Emily', 'Young', 'Finance', 65000),
-    ('Robert', 'Lee', 'Finance', 66000),
-    ('Maria', 'Garcia', 'R&D', 70000),
-    ('Daniel', 'Martin', 'R&D', 71000),
-    ('William', 'Wilson', 'HR', 49000),
-    ('Linda', 'Brown', 'Sales', 57000),
-    ('Richard', 'Moore', 'IT', 61000),
-    ('Susan', 'Taylor', 'Marketing', 54000),
-    ('Joseph', 'Hall', 'Finance', 67000),
     ('Nancy', 'Harris', 'R&D', 72000),
     ('Thomas', 'Thompson', 'HR', 48000),
     ('Patricia', 'Hernandez', 'IT', 59000);
@@ -97,4 +84,17 @@ WHERE department_name = (
 );
 show employees
 show departments
+close
+preview
+close
+preview
+close
+preview
+play recording employees__.rec
+preview
+show employees
+close
+mine table salaries
+salary
+y
 close

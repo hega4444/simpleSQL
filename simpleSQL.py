@@ -802,7 +802,7 @@ class SimpleInterface():
         readline.set_history_length(100)  # Set the desired history length
         # Set the custom completer
         readline.set_completer(self.custom_completer)
-        self.histfile = ".my_program_history"  # You can specify your history file   
+        self.histfile = "data/cmd_history"  # You can specify your history file   
 
         try:
             readline.read_history_file(self.histfile)  # Read the history if it exists
@@ -1400,12 +1400,12 @@ if __name__ == "__main__":
 
     with SimpleSQL("salaries", drop_after = True) as db:
 
-        db.create_table_from_csv("Experience-Salary.csv", table_name= "salaries" , create_pri_key = True)
+        db.create_table_from_csv("data/Experience-Salary.csv", table_name= "salaries" , create_pri_key = True)
 
         db.print("SELECT * FROM salaries", color='Multi2')
 
 
-    with SimpleSQL("population",load_file='population_db.sql' , drop_after=True ) as db:
+    with SimpleSQL("population",load_file='data/population_db.sql' , drop_after=True ) as db:
         db.printer.load_style(options={'color':'Multi2'})
 
         
