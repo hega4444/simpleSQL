@@ -790,9 +790,9 @@ class SimpleInterface():
                                  "decimal", "serial", "into", "foreign key", "primary key", 
                                  "references", "create table", "miner settings", "limits", 
                                  "hide_unfit", "detailed", "reset", "true", "false", "settings", 
-                                 "miner settings help", "list recordings", "execute", "fields",
+                                "list recordings", "execute", "fields", "with", "distinct",
                                  "make prediction", "home", "date", "time", "align", "set", "features", 
-                                 "set features", "miner features"]
+                                 "set features", "miner features", "recording", "prediction"]
         
         
         self.rec_file_names = self.get_recording_files_list()
@@ -926,7 +926,7 @@ class SimpleInterface():
         while command.lower() not in ['exit', 'close']:
 
 
-            if "select" in command.lower():
+            if "select" in command.lower() or "with" in command.lower():
                 command_start = 'print'
             
             elif command.lower() in ["clear", "home"]:
