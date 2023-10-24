@@ -1,0 +1,53 @@
+execute
+CREATE TABLE employees (
+    employee_id serial PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    department VARCHAR(50),
+    salary NUMERIC(10, 2)
+);
+execute
+INSERT INTO employees (first_name, last_name, department, salary)
+VALUES
+    ('John', 'Doe', 'HR', 50000),
+    ('Jane', 'Smith', 'HR', 48000),
+    ('Bob', 'Johnson', 'Sales', 55000),
+    ('Alice', 'Brown', 'Sales', 56000),
+    ('Eva', 'Williams', 'IT', 60000),
+    ('Michael', 'Anderson', 'IT', 62000),
+    ('Sarah', 'Clark', 'Marketing', 52000),
+    ('David', 'Hall', 'Marketing', 53000),
+    ('Emily', 'Young', 'Finance', 65000),
+    ('Robert', 'Lee', 'Finance', 66000),
+    ('Maria', 'Garcia', 'R&D', 70000),
+    ('Daniel', 'Martin', 'R&D', 71000),
+    ('William', 'Wilson', 'HR', 49000),
+    ('Linda', 'Brown', 'Sales', 57000),
+    ('Richard', 'Moore', 'IT', 61000),
+    ('Susan', 'Taylor', 'Marketing', 54000),
+    ('Joseph', 'Hall', 'Finance', 67000),
+    ('Nancy', 'Harris', 'R&D', 72000),
+    ('Thomas', 'Thompson', 'HR', 48000),
+    ('Patricia', 'Hernandez', 'IT', 59000);
+execute
+CREATE TABLE departments (
+    department_id serial PRIMARY KEY,
+    department_name VARCHAR(50)
+);
+INSERT INTO departments (department_name)
+VALUES
+    ('HR'),
+    ('Sales'),
+    ('IT'),
+    ('Marketing'),
+    ('Finance'),
+    ('R&D');
+execute
+INSERT INTO departments (department_name)
+VALUES
+    ('HR'),
+    ('Sales'),
+    ('IT'),
+    ('Marketing'),
+    ('Finance'),
+    ('R&D');

@@ -1,0 +1,100 @@
+SELECT
+    country_name,
+    AVG(population) AS average_population_2020
+FROM
+    city_population
+WHERE
+    year = 2020
+GROUP BY
+    country_name;
+SELECT
+    year,
+    AVG(population) AS average_population
+FROM
+    city_population
+GROUP BY
+    year;
+SELECT
+    SUM(population) AS total_population_2020
+FROM
+    city_population
+WHERE
+    year = 2020;
+SELECT
+    country_name,
+    SUM(population) AS total_population
+FROM
+    city_population
+GROUP BY
+    country_name;
+SELECT
+    year,
+    SUM(population) AS total_population
+FROM
+    city_population
+GROUP BY
+    year;
+SELECT
+    country_name,
+    COUNT(city_id) AS city_count
+FROM
+    city_population
+GROUP BY
+    country_name;
+SELECT
+    COUNT(city_id) AS city_count
+FROM
+    city_population;
+SELECT
+    year,
+    COUNT(city_id) AS city_count
+FROM
+    city_population
+GROUP BY
+    year;
+SELECT
+    country_name,
+    MIN(population) AS min_population
+FROM
+    city_population
+GROUP BY
+    country_name;
+SELECT
+    country_name,
+    MIN(population) AS min_population_2020
+FROM
+    city_population
+WHERE
+    year = 2020
+GROUP BY
+    country_name;
+SELECT
+    year,
+    MIN(population) AS min_population_2020
+FROM
+    city_population
+GROUP BY
+    year;
+SELECT
+    country_name,
+    MAX(population) AS max_population
+FROM
+    city_population
+GROUP BY
+    country_name;
+SELECT
+    country_name,
+    MAX(population) AS max_population_2020
+FROM
+    city_population
+WHERE
+    year = 2020
+GROUP BY
+    country_name;
+SELECT
+    year,
+    MAX(population) AS max_population_2020
+FROM
+    city_population
+GROUP BY
+    year;
