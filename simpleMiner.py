@@ -398,8 +398,6 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
     def define_model_features(self, features, target=None):
         super().define_model_features(features, target)
 
-        print("Features:::", features)
-
         if target is None:
             if self.current_target:
                 target = self.current_target
@@ -411,9 +409,7 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
         one_hot_columns = []
 
         # Create an instance of the OneHotEncoder
-        encoder = OneHotEncoder(sparse=False)
-
-        print(self.data_frame)
+        encoder = OneHotEncoder(sparse_output=False)
 
         for feature in features:
             unique_values = self.data_frame[feature].unique()
@@ -444,7 +440,6 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
 
                 # Create a DataFrame with the encoded data and new column names
                 encoded_df = pd.DataFrame(encoded_data, columns=new_column_names)
-                print(encoded_data)
 
                 # Drop the original column and concatenate the encoded DataFrame
                 self.data_frame = self.data_frame.drop(columns=[feature])
