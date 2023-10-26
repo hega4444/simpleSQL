@@ -1,15 +1,21 @@
 import os
 import sys
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'    # Disables excessive log
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'   # Disables ODNN
+
 from itertools import combinations
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from stringcolor import *
+import matplotlib
+matplotlib.use("Agg")
 
 #CONSTANTS
 LINEAR_MODEL = 1
@@ -40,6 +46,10 @@ class SimpleMinerBaseObject():
         self.one_hot_columns = []
         self.hide_unfit = True
         self.show_details = False
+        self.mae = None
+        self.mse = None
+        self.rmse = None
+        self.r2 = None
 
         self.table_fields = self.db.get_table_fields(table_name = self.table_name)
 
@@ -49,7 +59,6 @@ class SimpleMinerBaseObject():
 
     def verify_features_in_table(self, features):
         return all([True if f.capitalize() in self.table_fields else False for f in features])
-
 
     def get_data_frame(self, features, target):
              
@@ -82,8 +91,6 @@ class SimpleMinerBaseObject():
 
         features = [f.capitalize() for f in features]
         self.current_features = features
-
-       
 
     def predict(self, input_values):
         pass
@@ -136,7 +143,7 @@ class SimpleMinerBaseObject():
         # Convert the subgroups to lists
         sub_features = [list(subgroup) for subgroup in subgroups]
 
-        print(f"\n//simpleMiner - Analizing relations to field '{target}'. This may take some time...")
+        print(f"\nsimpleMiner - Analizing relations to field '{target}'. This may take some time...")
 
         # Display the subgroups
         max_r2 = 0
@@ -353,15 +360,154 @@ class SimpleMiner_Linear(SimpleMinerBaseObject):
     
 class SimpleMiner_ANN(SimpleMinerBaseObject):
 
-    def __init__(self, db_object, table_name, color=None) -> None:
+    def __init__(self, db_object, table_name, color=None):
         super().__init__(db_object, table_name, color)
 
+    def build_dynamic_model(self, num_features):
+        # Create and compile a dynamic model with a specified number of input features
+        input_shape = (None, num_features) 
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(128, activation='relu', input_shape = input_shape ), 
+            tf.keras.layers.Dense(64, activation='relu'),  # Additional hidden layers
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(16, activation='relu'),
+            tf.keras.layers.Dense(1)  # Single output neuron for regression
+            ])  
+        
+        model.compile(optimizer='adam', loss='mean_squared_error')
+        return model
 
-    
+    def adjust_input_shape(self, num_features):
+        # Method to adjust the input shape based on the number of features
+        self.model.layers[0].batch_input_shape = (None, num_features)
 
-            
+    def train_model(self, X_train, y_train, epochs):
+        # Train the model   
+        self.model.fit(X_train, y_train, epochs=epochs, verbose=0) #verbose 0 deactivates log
+        
+    def predict(self, X_test):
+        # Make predictions using the model
+        return self.model.predict(X_test)    #verbose 0 deactivates log
+
+    def define_model_features(self, features, target=None):
+        super().define_model_features(features, target)
+
+        print("features:::", features)
+
+        if target is None:
+            if self.current_target:
+                target = self.current_target
+            else:
+                raise ValueError("Missing target.")
+        
+        #num_features = len(features)  # Get the number of input features
+
+        # Examine Unique Values and Apply One-Hot Encoding
+        self.convert = {}
+        one_hot_columns = []
+
+        for feature in features:
+            unique_values = self.data_frame[feature].unique()
+
+            data_type = self.data_frame[feature].dtype
+            # Binary field input - (i.e 'Gender')
+            if len(unique_values) == 2:  # Boolean mapping
+                new_mapping = {'input_value': unique_values[0], 'new_value': 1, 'new_column': "same"}
+                self.convert[feature] = new_mapping
+
+                le = LabelEncoder()
+                self.data_frame[feature] = le.fit_transform(self.data_frame[feature])  # Male: 1, Female: 0
+
+            # If the feature is just a label, then encode (i.e. 'Job Title')
+            elif isinstance(self.data_frame[feature][0], str):
+                # Perform one-hot encoding in self.data_frame
+                encoded_cols = pd.get_dummies(self.data_frame, columns=[feature], prefix=feature)
+                # Replace special characters in column names with underscores
+                 # Define new column names
+                new_column_names = [str(col).replace("'", '').replace(' ', '_') for col in encoded_cols.columns]
+                # Rename the columns with the new names
+                encoded_cols.columns = new_column_names
+                one_hot_columns.extend(encoded_cols.columns)
+                self.convert[feature] = "multiple_selection"
+
+                # Drop the original column
+                self.data_frame = self.data_frame.drop(columns=feature)
+
+            # Standardize numeric values for ANN
+            elif data_type in (int, float, np.float64, np.int64):
+                scaler = StandardScaler()
+                self.data_frame[feature] = scaler.fit_transform(self.data_frame[feature].values.reshape(-1, 1))
+                # Create or adjust the model based on the number of features
+
+        # Standardize numeric values for selected columns
+        scaler = StandardScaler()
+        if one_hot_columns:
+            self.data_frame[one_hot_columns] = scaler.fit_transform(encoded_cols[one_hot_columns])
 
 
-            
+        # Prepare the data
+        X = self.data_frame.drop(columns=target)  # Input features (excluding the target)
+        y = self.data_frame[target].astype(np.float32)  # Target variable
 
-            
+        self.one_hot_columns = X.columns
+
+        adjusted_number_of_features = len (self.one_hot_columns)
+
+        if self.model is None:
+            self.model = self.build_dynamic_model(adjusted_number_of_features)
+        else:
+            self.adjust_input_shape(adjusted_number_of_features)
+
+        # Specify random values
+        tf.random.set_seed(42)
+        np.random.seed(42)
+
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Train the model with adjusted input shape
+        self.train_model(X_train, y_train, epochs=50)
+
+        # Make predictions
+        y_pred = self.predict(X_test)
+
+        # Evaluate the model
+        mae = tf.keras.metrics.mean_absolute_error(y_test, y_pred).numpy().mean()
+        mse = tf.keras.metrics.mean_squared_error(y_test, y_pred).numpy().mean()
+        rmse = np.sqrt(mse)
+
+        # Reshape y_pred based on the shape of y_test
+        if y_test.shape != y_pred.shape:
+            y_pred = y_pred.reshape(y_test.shape)
+
+        # Calculate R-squared (R2)
+        mean_y_test = np.mean(y_test)
+        total_sum_of_squares = np.sum(np.square(y_test - mean_y_test))
+
+        # Calculate the residual sum of squares
+        residual_sum_of_squares = np.sum(np.square(y_test - y_pred))
+
+        r2 = 1.0 - (residual_sum_of_squares / total_sum_of_squares)
+
+        # Store the scores as single float values
+        self.mae = float(mae)
+        self.mse = float(mse)
+        self.rmse = float(rmse)
+        self.r2 =  float(r2.iloc[0])
+
+
+
+
+    def show_plot(self):
+        
+        # Create a line plot for the relationship between actual and predicted values
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.actual_values, label='Actual', marker='o')
+        plt.plot(self.predicted_values, label='Predicted', marker='x')
+        plt.xlabel('Data Points')
+        plt.ylabel('Values')
+        plt.legend()
+        plt.title('Actual vs. Predicted Values')
+        plt.grid(True)
+        plt.show()

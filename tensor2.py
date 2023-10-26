@@ -10,7 +10,10 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 import matplotlib.pyplot as plt
+import matplotlib
 from simpleSQL import SimpleSQL
+
+matplotlib.use("TkAgg")
 
 # Load data and preprocess
 with SimpleSQL("salaries", drop_after=True) as db:
@@ -55,21 +58,15 @@ model = tf.keras.Sequential([
 # Compile the model
 model.compile(optimizer='adam', loss='mean_squared_error')
 
-# Redirect stdout and stderr to /dev/null
-sys.stdout = open(os.devnull, 'w')
-sys.stderr = open(os.devnull, 'w')
-
 # Train the model
-model.fit(X_train, y_train, epochs=50, verbose=1)
+model.fit(X_train, y_train, epochs=50, verbose=0)
 
 print(X)
 
-# Restore stdout and stderr to their original settings
-sys.stdout = sys.__stdout__
-sys.stderr = sys.__stderr__
 
 # Make predictions
 y_pred = model.predict(X_test)
+print(y_pred)
 
 # Let's say you want to predict salary for a 30-year-old female
 # Age has been standardized, and Gender is encoded (Male: 0, Female: 1)

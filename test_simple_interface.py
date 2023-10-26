@@ -12,5 +12,5 @@ if __name__ == '__main__':
                             table_name= "salaries" ,
                             create_pri_key = True
                             )
-        # Open GUI for friendlier db administration
-        db.simple_interface(load_script = "load_miners")       
+        # Open GUI for friendlier db administrationmodel 
+        db.simple_interface(load_script = None)         

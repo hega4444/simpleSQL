@@ -1,100 +1,100 @@
-def miner apple for salaries
 salary
-n
-def miner ball for salaries
-salary
-n
-list miner
-list miners
+ann
 close
-def miner ball for salaries
+def miner modelC for salaries
 salary
-n
-def miner ball for salaries
-a
-def miner apple for salaries
-salary
-n
-list miners
+ann
 close
-def miner apple for salaries
+def miner modelC for salaries
 salary
-y
-n
-def miner ball for salaries
-salary
-y
-n
-miner balll set features gender education
-miner ball set features gender education
-list miners
-make prediction ball
-Male
-phd
-make prediction apple
-Male
-as
-12
-miner apple set features Age Experience
-make prediction apple 
-12
+ann
 close
-start recording
-def miner model1 for salaries
 salary
-y
-n
-def model2 for salaries
-def miner model2 for salaries
+def miner modelC for salaries
 salary
-n
-miner model2 set features Age Experience
-list miners
-end recording
-y
-load_miners
-make prediction model2
-23
-12
+ann
+def miner modelC for salaries
+salary
+ann
+def miner modelC for salaries
+salary
+ann
 close
-make prediction model2
-23
-close
-def model3 for salaries
-def miner model3 for salaries
+def miner modelC for salaries
 salary
-n
-miner model3 set features Gender, Experience
-list miners
-make prediction model3
-Male
-12
-miner model3 settings limits 0.023 0.6 0.9
-list miners
+ann
+close
+salary
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+salary
+ann
+def miner modelC for salaries
+salary
+ann
+def miner modelC for salaries
+salary
+def miner modelC for salaries
+salary
+ann
+def miner modelC for salaries
+salary
+ann
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+SALARY
+ann
+close
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+salary
+ann
+def miner modelC for salaries
+salary
+ann
+close
+def miner modelC for salaries
+salary
+ann
+close
 preview
-list recordings
-list miners
-make prediction model2
-34
-23
 close
-list miners
-close
-plot model1
-plot model2
-plot model23
-plot
-plot model2
-plot model1
-plot model2
-list miners
-home
-list miners
 preview
-list
-def miner model4 for salaries
+def miner modelA for salaries
 salary
-y
-n
-list miners
+ann
+close
+def miner modelA for salaries
+salary
+ann
+close
+salary
+def miner modelA for salaries
+salary
+ann
+close
+def miner modelA for salaries
+salary
+ann
 close
