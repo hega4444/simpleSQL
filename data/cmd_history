@@ -1,8 +1,3 @@
-salary
-ann
-close
-def miner modelC for salaries
-salary
 ann
 close
 def miner modelC for salaries
@@ -97,4 +92,9 @@ close
 def miner modelA for salaries
 salary
 ann
+close
+def miner model4 for salaries
+salary
+ann
+list miners
 close

@@ -11,6 +11,7 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from stringcolor import *
@@ -363,7 +364,10 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
     def __init__(self, db_object, table_name, color=None):
         super().__init__(db_object, table_name, color)
 
-    def build_dynamic_model(self, num_features):
+        self.model_type = "ANN-seq"
+        self.model_current_features = []
+
+    def build_model(self, num_features):
         # Create and compile a dynamic model with a specified number of input features
         input_shape = (None, num_features) 
         model = tf.keras.Sequential([
@@ -377,10 +381,11 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
         
         model.compile(optimizer='adam', loss='mean_squared_error')
         return model
-
+    
     def adjust_input_shape(self, num_features):
         # Method to adjust the input shape based on the number of features
         self.model.layers[0].batch_input_shape = (None, num_features)
+
 
     def train_model(self, X_train, y_train, epochs):
         # Train the model   
@@ -393,7 +398,7 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
     def define_model_features(self, features, target=None):
         super().define_model_features(features, target)
 
-        print("features:::", features)
+        print("Features:::", features)
 
         if target is None:
             if self.current_target:
@@ -401,11 +406,14 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
             else:
                 raise ValueError("Missing target.")
         
-        #num_features = len(features)  # Get the number of input features
-
         # Examine Unique Values and Apply One-Hot Encoding
         self.convert = {}
         one_hot_columns = []
+
+        # Create an instance of the OneHotEncoder
+        encoder = OneHotEncoder(sparse=False)
+
+        print(self.data_frame)
 
         for feature in features:
             unique_values = self.data_frame[feature].unique()
@@ -421,18 +429,27 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
 
             # If the feature is just a label, then encode (i.e. 'Job Title')
             elif isinstance(self.data_frame[feature][0], str):
-                # Perform one-hot encoding in self.data_frame
-                encoded_cols = pd.get_dummies(self.data_frame, columns=[feature], prefix=feature)
-                # Replace special characters in column names with underscores
-                 # Define new column names
-                new_column_names = [str(col).replace("'", '').replace(' ', '_') for col in encoded_cols.columns]
-                # Rename the columns with the new names
-                encoded_cols.columns = new_column_names
-                one_hot_columns.extend(encoded_cols.columns)
-                self.convert[feature] = "multiple_selection"
+                # Extract the feature data and reshape for encoding
+                feature_data = self.data_frame[[feature]]
+                encoded_data = encoder.fit_transform(feature_data)
 
-                # Drop the original column
-                self.data_frame = self.data_frame.drop(columns=feature)
+                # Get the one-hot column names
+                encoded_feature_names = encoder.get_feature_names_out([feature])
+
+                # Define new column names based on your logic
+                new_column_names = [str(col).replace("'", '').replace(' ', '_') for col in encoded_feature_names]
+
+                # Store the column names
+                one_hot_columns.extend(new_column_names)
+
+                # Create a DataFrame with the encoded data and new column names
+                encoded_df = pd.DataFrame(encoded_data, columns=new_column_names)
+                print(encoded_data)
+
+                # Drop the original column and concatenate the encoded DataFrame
+                self.data_frame = self.data_frame.drop(columns=[feature])
+                self.data_frame = pd.concat([self.data_frame, encoded_df], axis=1)
+                self.convert[feature] = "multiple_selection"
 
             # Standardize numeric values for ANN
             elif data_type in (int, float, np.float64, np.int64):
@@ -440,24 +457,12 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
                 self.data_frame[feature] = scaler.fit_transform(self.data_frame[feature].values.reshape(-1, 1))
                 # Create or adjust the model based on the number of features
 
-        # Standardize numeric values for selected columns
-        scaler = StandardScaler()
-        if one_hot_columns:
-            self.data_frame[one_hot_columns] = scaler.fit_transform(encoded_cols[one_hot_columns])
-
-
         # Prepare the data
         X = self.data_frame.drop(columns=target)  # Input features (excluding the target)
         y = self.data_frame[target].astype(np.float32)  # Target variable
 
         self.one_hot_columns = X.columns
-
-        adjusted_number_of_features = len (self.one_hot_columns)
-
-        if self.model is None:
-            self.model = self.build_dynamic_model(adjusted_number_of_features)
-        else:
-            self.adjust_input_shape(adjusted_number_of_features)
+        total_number_of_features = len (self.one_hot_columns)
 
         # Specify random values
         tf.random.set_seed(42)
@@ -466,20 +471,31 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
         # Split the data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+
+        # Build the model, and re build when features have changed
+        features_have_changed = not (all(f.capitalize() in self.model_current_features for f in features) and \
+                                len(self.current_features) == len(self.model_current_features))
+        
+        if features_have_changed:
+            self.model = self.build_model( num_features = total_number_of_features )
+            self.model_current_features = self.current_features
+
         # Train the model with adjusted input shape
         self.train_model(X_train, y_train, epochs=50)
 
         # Make predictions
         y_pred = self.predict(X_test)
 
-        # Evaluate the model
-        mae = tf.keras.metrics.mean_absolute_error(y_test, y_pred).numpy().mean()
-        mse = tf.keras.metrics.mean_squared_error(y_test, y_pred).numpy().mean()
-        rmse = np.sqrt(mse)
+        #print(y_pred) # Check the format of the the prediction
 
         # Reshape y_pred based on the shape of y_test
         if y_test.shape != y_pred.shape:
             y_pred = y_pred.reshape(y_test.shape)
+
+        # Evaluate the model
+        mae = tf.keras.metrics.mean_absolute_error(y_test, y_pred).numpy().mean()
+        mse = tf.keras.metrics.mean_squared_error(y_test, y_pred).numpy().mean()
+        rmse = np.sqrt(mse)
 
         # Calculate R-squared (R2)
         mean_y_test = np.mean(y_test)
