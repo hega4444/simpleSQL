@@ -35,6 +35,7 @@ from stringcolor.ops import _load_colors
 import datetime
 import csv
 import os
+import sys
 import readline
 import rlcompleter
 import re
@@ -726,6 +727,11 @@ class SimpleSQL():
         
     def __enter__(self):
         #Handler for openning a new connection to DB
+
+        if self.db_name.lower() != self.db_name:
+            print(cs("Avoid CAPs when choosing Database name. Program terminated" , color='yellow'))
+            sys.exit(1)
+
         try:
             if self.drop_after is True:
                 self.drop_database()
@@ -737,7 +743,8 @@ class SimpleSQL():
             self.cur = self.conn.cursor()
 
         except Exception as e:
-            print(cs(e, color='yellow'))
+            print(cs(e , color='yellow'))
+            return
 
         if self.load_file:
             self.run_file(self.load_file)
@@ -784,9 +791,9 @@ class SimpleInterface():
                                  "target", "keywords", "help", "len", "size", "start recording",
                                  "end recording", "play recording", "pause", "varchar", "int", 
                                  "decimal", "serial", "into", "foreign key", "primary key", 
-                                 "references", "create table", "miner settings", "limits", 
+                                 "references", "create table", "miner", "limits", "plot",
                                  "hide_unfit", "detailed", "reset", "true", "false", "settings", 
-                                "list recordings", "execute", "fields", "with", "distinct",
+                                 "list recordings", "execute", "fields", "with", "distinct",
                                  "make prediction", "home", "date", "time", "align", "set", "features", 
                                  "set features", "miner features", "recording", "prediction"]
         
@@ -833,18 +840,22 @@ class SimpleInterface():
         readline.write_history_file(self.histfile)
     
     def get_input(self):
+        # Replaces the standard input() method with a custom logic  
+        # If there is active recording, the user input is appended to a list
         if self.recording is True:
             value = input("rec*")
             if value.lower() != "end recording":
                 self.recording_commands.append(value)
             return value
         else:
+            # If a recording is being executed, pick the next command from a buffer
             if self.executing_recording is True:
                 if self.execute_buffer:
                     next_command = self.execute_buffer.pop(0).replace("\n", "")
                     print(cs("-->" + next_command, color='white'))
                     return next_command
                 else:
+                    # When the buffer gets empty comes back to getting commands from user
                     self.executing_recording = False
                     print(cs(f"\nEnd of recording '{self.recording_file_name}'.", color= "LightSteelBlue2"))
             return input(">>>")
@@ -942,7 +953,6 @@ class SimpleInterface():
                     self.cur_color = 'Multi1'
                     options = {'color': self.cur_color}
                     self.db.printer.load_style(options)
-                    self.miner.theme_color = self.cur_color
                 except Exception as e:
                        print(cs(e, color='yellow'))
                 command_executed = True
@@ -956,7 +966,6 @@ class SimpleInterface():
                     if arg.lower() in colors or arg in ['multi1', 'multi2']:
                         options = {'color':arg}
                         self.db.printer.load_style(options)
-                        self.miner.theme_color = arg
                         self.cur_color = arg
                 except IndexError:
                     print(cs("Indicate a color.", color='yellow'))
@@ -1087,17 +1096,17 @@ class SimpleInterface():
 
 
             elif "def miner" in command_low:
+                # Creates a handler for a mining object
                 try:
-
                     args = self.get_args("def miner", command)  #def miner 0:'apple' 1:for 2:'salaries'
                     new_name =  args[0]
                     table = args[2]
 
                     if "for" not in args:
-                        raise SyntaxError(f"Missing arguments. Type 'def <miner_name> for <table>' first.")
+                        raise SyntaxError(f"Missing arguments. Type 'def miner <miner_name> for <table>' first.")
 
                     if new_name in self.keywords or new_name in self.db.get_table_names():
-                        raise ValueError(f"Cannot create miner '{name}'. Do not use table names or keywords.")
+                        raise ValueError(f"Cannot create miner '{name}'. Avoid using table names or keywords.")
 
                     if not self.db.check_table_exists(table_name = table):
                         raise ValueError(f"Table '{table}' does not exist.")
@@ -1129,7 +1138,7 @@ class SimpleInterface():
                                                                 show_details= self.show_r2_details, 
                                                                 hide_unfit= self.hide_unfit)
                                        
-                    print(cs(f"Set up model features automatically?[y/n]:", color= "LightSteelBlue2"), end="", flush=True)
+                    print(cs(f"\nSet up model features automatically?[y/n]:", color= "LightSteelBlue2"), end="", flush=True)
                     auto_set_up = True if self.get_input().lower() in ["y", "yes"] else False
 
                     if auto_set_up:
@@ -1138,37 +1147,43 @@ class SimpleInterface():
 
                         self.active_miners[new_name].define_model_features(features = features, target= [target.capitalize()])
 
-                    print(cs(f"Plot results?[y/n]:", color= "LightSteelBlue2"), end="", flush=True)
+                    print(cs(f"Plot features incidences?[y/n]:", color= "LightSteelBlue2"), end="", flush=True)
                     show_plot = True if self.get_input().lower() in ["y", "yes"] else False
 
                     if show_plot:
-                        self.active_miners[new_name].show_plot()
+                        self.active_miners[new_name].show_plot_features()
+
                 except IndexError:
-                    print(cs("Missing arguments. Type 'def <miner_name> for <table>' first.", color='yellow'))
+                    print(cs("Missing arguments. Type 'def miner <miner_name> for <table>' first.", color='yellow'))
                 except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True
 
-            elif "settings" in command_low and command_low.split("settings")[0].replace(" ", "") in self.active_miners:
+            elif "settings" in command_low and command.split("settings")[0].replace(" ", "") in self.active_miners:
                 try:
-                    miner_name = command_low.split("settings")[0].replace(" ", "")
-                    print(cs(f"Miner: {miner_name}", color='LightSteelBlue2'))
-                    print(cs(f"Current features: {', '.join(self.active_miners[miner_name].current_features)}", color='LightSteelBlue2'))
-                    self.active_miners[miner_name].show_model_performance()
-                    r2_1, r2_2, r2_3 = self.active_miners[miner_name].r2_limits
-                    print(cs(f"""R² high threshole: {r2_1}
-R² moderate threshold:{ r2_2} 
-R² low threshold: {r2_3}
-                                """, color='LightSteelBlue2'))
-                    print(cs(f"Hide_unfit: {self.hide_unfit}", color='LightSteelBlue2'))
-                    print(cs(f"Detailed: {self.show_r2_details}", color='LightSteelBlue2'))
-                    print(cs("\ntype 'miner settings help' to learn how to adjust settings", color='LightSteelBlue2'))               
+                    settings_table = self.db.new_table(options={'color':self.cur_color, 'align':'l'})
+                    settings_table.field_names = ['Setting', 'Value']
+                    miner_name = command.split(f"settings")[0].replace(" ", "")
+                    mr = self.active_miners[miner_name]
+                    features = ', '.join(self.active_miners[miner_name].current_features)
+                    settings_table.add_row(["Current features", features])
+                    settings_table.add_row(["__Performance indicators______", "_"*len(features)])
+                    settings_table.add_row(["Mean Absolute Error (MAE)", mr.mae])
+                    settings_table.add_row(["Mean Squared Error (MSE)", mr.mse])
+                    settings_table.add_row(["Root Mean Squared Error (RMSE)", mr.rmse]) 
+                    settings_table.add_row(["R-sqaured (R²)", mr.r2])
+                    settings_table.add_row(["R² high threshole", mr.r2_limits[0]])
+                    settings_table.add_row(["R² moderate threshole", mr.r2_limits[1]])
+                    settings_table.add_row(["R² low threshole", mr.r2_limits[2]])
+                    settings_table.add_row(["______________________________", "_"*len(features)])
+                    settings_table.add_row(["Hide unfit combinations", mr.hide_unfit])
+                    settings_table.add_row(["Detailed scores analysis", mr.show_details])
+                    print(settings_table)
                 except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True
-
             
-            elif "set " in command_low and command_low.split("set")[0].replace(" ", "") in self.active_miners:
+            elif "set " in command_low and command.split("set")[0].replace(" ", "") in self.active_miners:
             
                 try:
                     args = re.split(r'[,\s]+', command)
@@ -1222,9 +1237,9 @@ R² low threshold: {r2_3}
                     print(cs(e, color='yellow'))
                 command_executed = True
             
-            elif "reset" in command_low and command_low.split("reset")[0].replace(" ", "") in self.active_miners:
+            elif "reset" in command_low and command.split("reset")[0].replace(" ", "") in self.active_miners:
                 try:
-                        miner_name = command_low.split("reset")[0].replace(" ", "")
+                        miner_name = command.split("reset")[0].replace(" ", "")
                         
                         self.active_miners[miner_name].reset_limits()
                         self.active_miners[miner_name].show_details = False
@@ -1238,7 +1253,7 @@ R² low threshold: {r2_3}
             elif "reset" in command_low:
                 print(cs("Type '<miner_name> reset'.", color='yellow'))
             
-            elif "delete" in command_low and command_low.split("delete")[0].replace(" ", "") in self.active_miners:
+            elif "delete" in command_low and command.split("delete")[0].replace(" ", "") in self.active_miners:
                 try:
                     miner_name = command_low.split("delete")[0].replace(" ", "")
                     print(cs(f"You are about to delete miner '{miner_name}', are you sure? [y/n]:", color='LightSteelBlue2'), end="", flush=True)  
@@ -1325,7 +1340,10 @@ R² low threshold: {r2_3}
                         features = ', '.join(self.active_miners[miner_name].current_features)
                         cur_r2 = round(self.active_miners[miner_name].r2, 3)
                         max_r2 = round(self.active_miners[miner_name].max_r2, 3)
-
+                        # If the model execution performed better than during analysis, then update max
+                        if cur_r2 > max_r2:
+                            max_r2 = cur_r2
+                            self.active_miners[miner_name].max_r2 = max_r2
 
                         record = [miner_name, table_name, model_type, features, cur_r2, max_r2]
                         table.add_row(record)
@@ -1344,7 +1362,7 @@ R² low threshold: {r2_3}
                     miner_name = args[0]
                     if miner_name not in self.active_miners:
                         raise ValueError(f"Miner '{miner_name}' has not been defined yet.")
-                    self.active_miners[miner_name].show_plot()
+                    self.active_miners[miner_name].show_plot_performance()
                 except Exception as e:
                     print(cs(e, color='yellow'))
                 command_executed = True

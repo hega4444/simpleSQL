@@ -16,17 +16,21 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 from stringcolor import *
 import matplotlib
-matplotlib.use("Agg")
+#matplotlib.use("Agg")
 
 #CONSTANTS
 LINEAR_MODEL = 1
 ANN_MODEL = 2
+
+# Set the logging level to only show error messages
+tf.get_logger().setLevel('ERROR')
 
 
 class SimpleMinerBaseObject():
 
     def __init__(self, db_object, table_name, color = None) -> None:
         
+        # Inner atrributes
         self.db = db_object
         self.table_name = table_name
         self.model = None
@@ -37,20 +41,26 @@ class SimpleMinerBaseObject():
         self.data_frame = None
         self.convert = None
         self.field_scores = None
+        # Params for scoring R2
         self.r2_limits = [0.8, 0.4, 0.0]
         self.r2_limits_c = [0.8, 0.4, 0.0]
         self.max_r2 = 0
-        self.plot_limit = 3
+        self.plot_limit = 4
+        # Current settings
         self.current_features = []
         self.current_target = None
         self.theme_color = 'Gold' if color is None else color
         self.one_hot_columns = []
         self.hide_unfit = True
         self.show_details = False
+        # Performance indicators
         self.mae = None
         self.mse = None
         self.rmse = None
         self.r2 = None
+        # Update values for plotting
+        self.actual_values = None
+        self.predicted_values = None
 
         self.table_fields = self.db.get_table_fields(table_name = self.table_name)
 
@@ -152,7 +162,9 @@ class SimpleMinerBaseObject():
 
             self.field_scores[i] = {'features': features}
             
-            #Set new features for the model
+            # Show there is some progress
+            print(".", end = "", flush=True)
+            # Set new features for the model
             self.define_model_features(features=features, target=[target])
 
             self.field_scores[i]['scores'] = {}
@@ -234,7 +246,7 @@ class SimpleMinerBaseObject():
         print(table)
         return sorted_data
 
-    def show_plot(self):
+    def show_plot_features(self):
         if self.field_scores:
             r_values = [(feat['features'], round(feat['scores']['R2'],3)) for feat in self.field_scores.values()]
             r_values = [feat for feat in r_values if len(feat[0]) == 1]
@@ -258,6 +270,31 @@ class SimpleMinerBaseObject():
             plt.axis('equal')  # Equal aspect ratio ensures that the pie chart is drawn as a circle.
             plt.show()
  
+    def show_plot_performance(self):
+
+        # Ensure self.actual_values and self.predicted_values are NumPy arrays
+        actual_values = np.array(self.actual_values)
+        predicted_values = np.array(self.predicted_values)
+
+        # Create a figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+        fig.patch.set_facecolor('lightgrey')  # Set the background color of the entire figure
+
+        # Set the background color of the plot area to grey
+        ax.set_facecolor('lightgrey')
+
+        # Create a line plot for the relationship between actual and predicted values
+        ax.plot(actual_values, label='Actual', marker='o', linestyle='-', color='blue')
+        ax.plot(predicted_values, label='Predicted', marker='x', linestyle='--', color='red')
+        ax.set_xlabel('Data Points')
+        ax.set_ylabel('Values')
+        ax.legend()
+        ax.set_title('Actual vs. Predicted Values')
+        ax.grid(True)
+
+        # Show the plot
+        plt.show()
+
 class SimpleMiner_Linear(SimpleMinerBaseObject):
 
     def __init__(self, db_object, table_name, color=None) -> None:
@@ -267,8 +304,7 @@ class SimpleMiner_Linear(SimpleMinerBaseObject):
     
     def one_hot_encode_new_data(self, input_data):
         super().one_hot_encode_new_data(input_data)
-        # Ensure the new data has the same columns as the one-hot encoded training data
-
+        
         new_data = {}
 
         for col in self.one_hot_columns:
@@ -328,6 +364,10 @@ class SimpleMiner_Linear(SimpleMinerBaseObject):
         self.mse = mean_squared_error(self.y_test, self.y_pred)
         self.rmse = np.sqrt(self.mse)
         self.r2 = r2_score(self.y_test, self.y_pred)
+
+        # Update values for plotting
+        self.actual_values = self.y_test
+        self.predicted_values = self.y_pred
         
     def predict(self, input_values):
         super().predict(input_values)
@@ -366,7 +406,10 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
 
         self.model_type = "ANN-seq"
         self.model_current_features = []
-
+        self.actual_values = None
+        self.predicted_values = None
+        self.scalers = {}
+ 
     def build_model(self, num_features):
         # Create and compile a dynamic model with a specified number of input features
         input_shape = (None, num_features) 
@@ -386,17 +429,66 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
         # Method to adjust the input shape based on the number of features
         self.model.layers[0].batch_input_shape = (None, num_features)
 
-
     def train_model(self, X_train, y_train, epochs):
         # Train the model   
         self.model.fit(X_train, y_train, epochs=epochs, verbose=0) #verbose 0 deactivates log
         
-    def predict(self, X_test):
+    def model_inner_predict(self, X_test): #model oriented (data has to be formatted)
         # Make predictions using the model
-        return self.model.predict(X_test)    #verbose 0 deactivates log
+        return self.model.predict(X_test, verbose=0)    #verbose 0 deactivates log
+    
+    def one_hot_encode_new_data(self, input_data):
+        super().one_hot_encode_new_data(input_data)
+        
+        new_data = {}
+
+        for col in self.one_hot_columns:
+            if col not in input_data:
+                # If the column is missing, add it with all zeros
+                new_data[col] = 0
+            else:
+                new_data[col] = input_data[col]
+        
+        return pd.DataFrame(new_data)
+
+    def predict(self, input_values): #user oriented (data can come in the form of a dictionary)
+        super().predict(input_values)
+
+        if self.model:
+
+            mapped_data = {}
+
+            #Add columns for boolean transformations (i.e Gender)
+            for field in input_values:
+                if field in self.convert:                               #for discreet values
+                    if self.convert[field] == "multiple_selection":
+                        try:
+                            mapped_data[field + "_" + input_values[field]] = 1
+                        except Exception as e:
+                            print(cs(e, color='yellow'))
+                            return
+                        
+                    elif input_values[field] == self.convert[field]['input_value']: #for boolean clasification
+                        mapped_data[field] = [self.convert[field]['new_value']]
+                    else:
+                        mapped_data[field] = [ 1 - self.convert[field]['new_value'] ]
+                else:  
+                    #If it is a numeric value then call its scaler to adjust the input value
+                    scaler = self.scalers[field]
+                    user_value = np.array([[input_values[field]]])
+                    scaled_input = scaler.transform(user_value)
+                    mapped_data[field] = scaled_input[0]
+            
+            encoded_data = self.one_hot_encode_new_data(mapped_data)
+
+            predicted_output = self.model.predict(encoded_data, verbose=0) #verbose 0 to deactivate screen output
+
+        return predicted_output[0][0]
 
     def define_model_features(self, features, target=None):
         super().define_model_features(features, target)
+
+        features = [f.capitalize() for f in features]
 
         if target is None:
             if self.current_target:
@@ -417,7 +509,7 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
             data_type = self.data_frame[feature].dtype
             # Binary field input - (i.e 'Gender')
             if len(unique_values) == 2:  # Boolean mapping
-                new_mapping = {'input_value': unique_values[0], 'new_value': 1, 'new_column': "same"}
+                new_mapping = {'input_value': unique_values[0], 'new_value': 1, 'new_column': False }
                 self.convert[feature] = new_mapping
 
                 le = LabelEncoder()
@@ -449,8 +541,11 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
             # Standardize numeric values for ANN
             elif data_type in (int, float, np.float64, np.int64):
                 scaler = StandardScaler()
+                # Fit the scaler to the training data for the current feature
+                scaler.fit(self.data_frame[feature].values.reshape(-1, 1))
                 self.data_frame[feature] = scaler.fit_transform(self.data_frame[feature].values.reshape(-1, 1))
-                # Create or adjust the model based on the number of features
+                # Keep a reference to the scaler for later predictions 
+                self.scalers[feature] = scaler
 
         # Prepare the data
         X = self.data_frame.drop(columns=target)  # Input features (excluding the target)
@@ -479,7 +574,7 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
         self.train_model(X_train, y_train, epochs=50)
 
         # Make predictions
-        y_pred = self.predict(X_test)
+        y_pred = self.model_inner_predict(X_test)
 
         #print(y_pred) # Check the format of the the prediction
 
@@ -505,20 +600,12 @@ class SimpleMiner_ANN(SimpleMinerBaseObject):
         self.mae = float(mae)
         self.mse = float(mse)
         self.rmse = float(rmse)
-        self.r2 =  float(r2.iloc[0])
 
+        if isinstance(r2, pd.Series):
+            self.r2 = float(r2.iloc[0])
+        elif isinstance(r2, float):
+            self.r2 = r2
 
-
-
-    def show_plot(self):
-        
-        # Create a line plot for the relationship between actual and predicted values
-        plt.figure(figsize=(10, 6))
-        plt.plot(self.actual_values, label='Actual', marker='o')
-        plt.plot(self.predicted_values, label='Predicted', marker='x')
-        plt.xlabel('Data Points')
-        plt.ylabel('Values')
-        plt.legend()
-        plt.title('Actual vs. Predicted Values')
-        plt.grid(True)
-        plt.show()
+        # Update values for plotting
+        self.actual_values = y_test
+        self.predicted_values = y_pred

@@ -1,100 +1,100 @@
-ann
-close
-def miner modelC for salaries
-salary
-ann
-close
-salary
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-salary
-ann
-def miner modelC for salaries
-salary
-ann
-def miner modelC for salaries
-salary
-def miner modelC for salaries
-salary
-ann
-def miner modelC for salaries
-salary
-ann
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-SALARY
-ann
-close
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-salary
-ann
-def miner modelC for salaries
-salary
-ann
-close
-def miner modelC for salaries
-salary
-ann
-close
-preview
-close
-preview
-def miner modelA for salaries
-salary
-ann
-close
-def miner modelA for salaries
-salary
-ann
-close
-salary
-def miner modelA for salaries
-salary
-ann
-close
-def miner modelA for salaries
-salary
-ann
-close
-def miner model4 for salaries
-salary
-ann
+make prediction model4
+5
+30
+make prediction model4
+9
+35
+help
+color red
+color brown
+color red
+color green
+color bluw
+color asd
+color red
+color blue
+color magenta
 list miners
+model4 settings
+color red
+show salaries
+color blue
+show salaries
 close
-def miner model4 for salaries
-salary
-ann
-y
+color red
+show salaries
+list miners
+color default
+close
+color default
+color blue
+dfsdf
+/home/dci-student/simpleSQL/venv/bin/python /home/dci-student/simpleSQL/test_input.py
+close
+list miners
+color default
+/home/dci-student/simpleSQL/venv/bin/python /home/dci-student/simpleSQL/test.py
+close
+yxcyxc
+list miners
+color red
+def
+def miner
+help
+close
+sdfsdf
+sdfdsf
+sdfsdf
+dfdsf
+sdfsdf
+sdfdf
+list miners
+len salaries
+size salaries
+preview
 clear
-asaS
-CLEAR
-list miners
-def miner modelA for salaries
+start recording
+def miner model4 for salaries
 salary
-l
+ann
 y
 n
+end recording
+y
+load_model4
+clear
 list miners
+plot model4
+clear
+help
+miner help
+close
+make prediction modelAnn
+Male
+PhD
+12
+modelAnn settings
+modelL settings
+modelAnn settings
+clear
+modelAnn settings
+close
+modelAnn settings
+close
+modelAnn setings
+modelAnn settings
+close
+plot modelAnn
+modelAnn settings
+/home/dci-student/simpleSQL/venv/bin/python /home/dci-student/simpleSQL/simpleAI.py
+close
+show salaries
+list miners
+modelAnn settings
+make prediction modelAnn
+Male
+PhD
+12
+plot modelAnn
+/home/dci-student/simpleSQL/venv/bin/python /home/dci-student/simpleSQL/simpleAI.py
 close
